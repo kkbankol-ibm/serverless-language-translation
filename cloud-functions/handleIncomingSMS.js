@@ -29,10 +29,10 @@ function main(params) {
   // https://www.twilio.com/console
   var ow = openwhisk()
   var redisConfig = {
-      user: params.redisUsername,
-      password: params.redisPassword,
-      host: params.redisHost,
-      port: params.redisPort
+    user: params.redisUsername,
+    password: params.redisPassword,
+    host: params.redisHost,
+    port: params.redisPort
   }
   var cursor = '0'
 
@@ -69,10 +69,10 @@ function main(params) {
           redisClient.expire(key, 300)
           resolve(
             {
-            payload: params.Body,
-            client: "smsclient" + '_' + key.split(':')[1],
-            senderNumber: params.From,
-            sourceLanguage: key.split(':')[0]
+              payload: params.Body,
+              client: "smsclient" + '_' + key.split(':')[1],
+              senderNumber: params.From,
+              sourceLanguage: key.split(':')[0]
             }
           )}
         else {
@@ -98,13 +98,13 @@ function main(params) {
                 })
               }
             })
-          }
+        }
       }).then(result => {
         return ow.triggers.invoke({
           name: 'msgReceived',
           params: result
         })
       })
-  })
+    })
 
 }

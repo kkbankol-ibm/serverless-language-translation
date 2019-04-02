@@ -1,0 +1,28 @@
+env:
+  # browser: true
+  amd: true
+  es6: true
+  node: true
+extends:
+  - 'eslint:recommended'
+rules:
+  indent:
+    - warn
+    - 2
+  linebreak-style:
+    - error
+    - unix
+  no-unused-vars:
+    - warn
+  no-undef:
+    - warn
+  no-irregular-whitespace:
+    - warn
+  no-mixed-spaces-and-tabs:
+    - warn
+  no-console:
+    - off
+  no-redeclare:
+    - warn
+  semi:
+    - off

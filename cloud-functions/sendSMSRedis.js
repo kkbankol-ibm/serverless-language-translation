@@ -17,50 +17,49 @@
 function main(params) {
   // get twilioSid and twilioAuthToken from
   // https://www.twilio.com/console
-  const twilioClient = require('twilio')(params.twilioSid, params.twilioAuthToken)
-  var redis = require('redis')
-  const bluebird = require('bluebird')
+  let twilioClient = require('twilio')(params.twilioSid, params.twilioAuthToken)
+  let redis = require('redis')
+  let bluebird = require('bluebird')
   var cursor = '0'
 
   bluebird.promisifyAll(redis.RedisClient.prototype);
 
   var redisConfig = {
-      user: params.redisUsername,
-      password: params.redisPassword,
-      host: params.redisHost,
-      port: params.redisPort
+    user: params.redisUsername,
+    password: params.redisPassword,
+    host: params.redisHost,
+    port: params.redisPort
   }
   const redisClient = redis.createClient(redisConfig)
 
   function sendSMS(recipient) {
     twilioClient.messages.create({
-        to: recipient,
-        from: params.twilioNumber,
-        body: params.payload,
+      to: recipient,
+      from: params.twilioNumber,
+      body: params.payload,
     }, function(err, message) {
-        if (err) {
-          console.log('error:', err);
-        }
-        else {
-          console.log(message);
-        }
+      if (err) {
+        console.log('error:', err);
+      } else {
+        console.log(message);
+      }
     })
   }
 
   // loop through all SMS clients subscribed to given language, text translation result
   redisClient.scanAsync(cursor, 'MATCH', params.language + ":*").then(
-    function (res) {
+    function(res) {
       var keys = res[1]
       for (key in keys) {
-         redisClient.getAsync(keys[key]).then(
-           function(number) {
-             if ((params.senderNumber) && (params.senderNumber == number)) {
-                 console.log("skipping")
-             } else{
-                 console.log("sending text to " + number)
-                 sendSMS(number)
-             }
-         })
+        redisClient.getAsync(keys[key]).then(
+          function(number) {
+            if ((params.senderNumber) && (params.senderNumber == number)) {
+              console.log("skipping")
+            } else {
+              console.log("sending text to " + number)
+              sendSMS(number)
+            }
+          })
       }
-  })
+    })
 }

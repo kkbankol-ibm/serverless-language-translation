@@ -1,10 +1,11 @@
 *Read this in other languages: [日本語](README-ja.md).*
 
 [![Build Status](https://travis-ci.org/IBM/serverless-language-translation.svg?branch=master)](https://travis-ci.org/IBM/serverless-language-translation)
+<!-- [![Build Status](https://travis-ci.org/kkbankol-ibm/serverless-language-translation.svg?branch=master)](https://travis-ci.org/kkbankol-ibm/serverless-language-translation) -->
 
 # Deploy a Serverless Multilingual Conference Room
 
-In this code pattern, we will create the workings for a multilingual chat room using OpenWhisk, Watson Text to Speech and Watson Language Translator.  The MQTT messaging protocol is also leveraged, which allows each client to publish and subscribe to one or more channels.  This repository contains a series of serverless functions which are called in sequence determined by the channel to which a message is submitted.  
+In this code pattern, we will create the workings for a multilingual chat room using IBM Cloud Functions, Watson Text to Speech and Watson Language Translator.  The MQTT messaging protocol is also leveraged, which allows each client to publish and subscribe to one or more channels.  This repository contains a series of serverless functions which are called in sequence determined by the channel to which a message is submitted.  
 
 When the reader has completed this code pattern, they will understand how to:
 
@@ -16,7 +17,7 @@ When the reader has completed this code pattern, they will understand how to:
 
 ## Flow
 
-1. Message received from a client, which can be a web browser, CLI, OpenWhisk action, SMS text, etc.
+1. Message received from a client, which can be a web browser, CLI, SMS text, etc.
 2. If message payload contains an audio file, it is transcribed to text.
 3. Transcribed text is translated to other supported languages.
 4. If message is sent via SMS, sender phone number is added to an etcd key-value store. etcd is used here to maintain a list of subscribers’ phone numbers, as well as their respective languages. An adjustable TTL value is used here to remove numbers from the store if the subscriber does not participate in the conversation for 300 seconds.
@@ -32,7 +33,7 @@ When the reader has completed this code pattern, they will understand how to:
 
 * [Messaging](https://developer.ibm.com/messaging/message-hub/): Messaging is a key technology for modern applications using loosely decoupled architecture patterns such as microservices.
 * [Node.js](https://nodejs.org/): An open-source JavaScript run-time environment for executing server-side JavaScript code.
-* [OpenWhisk](https://www.ibm.com/cloud-computing/bluemix/openwhisk): An open source event-driven platform that allows you to execute code in response to an event. This is the underlying technology for the IBM Cloud Functions offering
+* [Cloud Functions](https://www.ibm.com/cloud-computing/bluemix/openwhisk): An open source event-driven platform that allows you to execute code in response to an event. This is the underlying technology for the IBM Cloud Functions offering
 
 # Watch the Video
 [![](http://img.youtube.com/vi/eXY0uh_SeKs/0.jpg)](https://www.youtube.com/watch?v=eXY0uh_SeKs)
@@ -70,10 +71,12 @@ Create the required IBM Cloud services.
 - [Text To Speech](https://cloud.ibm.com/catalog/services/text-to-speech)
 - [Watson IoT Platform](https://cloud.ibm.com/catalog/services/internet-of-things-platform)
 - [Watson Language Translator](https://cloud.ibm.com/catalog/services/language-translator)
+<!-- - [Kubernetes](https://cloud.ibm.com/kubernetes/catalog/cluster) -->
 
-For SMS integration, create the following third party services.
+For SMS integration, create the following third party services. Note that these are both paid services.
 - [Twilio](https://cloud.ibm.com/catalog/services/twilio-programmable-sms)
-- [Redis](https://cloud.ibm.com/catalog/services/databases-for-redis)
+- [etcd](https://console.bluemix.net/catalog/services/compose-for-etcd)
+<!-- - [Redis](https://cloud.ibm.com/catalog/services/databases-for-redis) -->
 
 Each service can be provisioned with the following steps
 
@@ -156,7 +159,19 @@ mqtt_pub -i "a:${IOT_ORG_ID}:client_pub" -u "${IOT_API_KEY}" -P "${IOT_AUTH_TOKE
 
 ### 2. Deploy MQTT Feed
 
-Install the MQTT package/feed found in the openwhisk-package-mqtt-watson submodule [here](https://github.com/kkbankol-ibm/openwhisk-package-mqtt-watson). This "feed" enables OpenWhisk to subscribe to one or more MQTT topics and invoke actions in response to incoming messages. To see more on how feeds work with IBM Cloud Functions, please visit these [documents](https://github.com/apache/incubator-openwhisk/blob/master/docs/feeds.md)
+Install the MQTT package/feed found in the openwhisk-package-mqtt-watson submodule [here](https://github.com/kkbankol-ibm/openwhisk-package-mqtt-watson). This "feed" enables the Cloud Functions service to subscribe to one or more MQTT topics and invoke actions in response to incoming messages. To see more on how feeds work with IBM Cloud Functions, please visit these [documents](https://github.com/apache/incubator-openwhisk/blob/master/docs/feeds.md)
+
+<!-- Next, we'll need to deploy a "feed" for our IoT Platform service. This feed has the ability to subscribe to a specific MQTT channel and execute a function every time a new message comes in.
+
+```
+git clone https://github.com/ibm-watson-iot/openwhisk-package-watsoniotp
+```
+
+```
+ibmcloud fn package bind /watson-iot/iot-gateway iotCreds -p org ${IOT_ORG_ID} -p gatewayTypeId ${IOT_DEVICE_TYPE} -p gatewayId ${IOT_DEVICE_ID} -p gatewayToken ${IOT_AUTH_TOKEN}
+```
+
+More documentation on feeds https://console.bluemix.net/docs/services/IoT/gateways/iotgw.html#gw_package -->
 
 ### 3. Upload Actions
 Upload each "Action" to the Cloud Functions codebase with the following commands.
@@ -244,8 +259,8 @@ Flow:
 
 - Trigger associated with topic forwards message payload/language to translator action.
 - Translator action passes message payload through a loop, where each item is a language that the original message will be translated to. After translation is complete, another trigger will be fired, which kicks off two other "publish" actions simultaneously.
-  - One action publishes results to all MQTT clients
-  - The other action looks up SMS subscriber numbers/language in Redis and sends them the result via Twilio.
+- One action publishes results to all MQTT clients
+- The other action looks up SMS subscriber numbers/language in Redis and sends them the result via Twilio.
 
 <!-- Restrictions:
 
@@ -253,7 +268,7 @@ Watson IOT provides an MQTT broker, but has restrictions on how MQTT topics can 
 
 MQTT package/feed requires a CF app, which technically means this implementation is not serverless. -->
 
-# Links
+<!-- # Links -->
 <!-- * [Watson Node.js SDK](https://github.com/watson-developer-cloud/node-sdk) -->
 
 ## License

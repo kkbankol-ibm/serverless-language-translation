@@ -31,7 +31,7 @@ function main(params) {
   }
 
   if (params.__bx_creds && params.__bx_creds.language_translator) {
-    config = {
+    var config = {
       username: params.__bx_creds.language_translator.username,
       password: params.__bx_creds.language_translator.password,
       url: params.__bx_creds.language_translator.url,
@@ -39,7 +39,7 @@ function main(params) {
       type: "bound_creds"
     }
   } else {
-    config = {
+    var config = {
       username: params.language_translator_username,
       password: params.language_translator_password,
       url: 'https://gateway.watsonplatform.net/language-translator/api/',
@@ -53,7 +53,7 @@ function main(params) {
   var languages = supportedLanguages.filter(
     function(lang) {
       return lang != msgVals.sourceLanguage
-  });
+    });
   var translations = languages.map(function (targetLanguage) {
     return new Promise((resolve, reject) => {
       language_translator.translate(
@@ -97,7 +97,7 @@ function main(params) {
     })
   )
   return Promise.all(translations).then(function (results) {
-        console.log(results);
-        return resolve({payload: "Translations complete"});
+    console.log(results);
+    return resolve({payload: "Translations complete"});
   });
 }

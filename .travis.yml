@@ -1,27 +1,22 @@
 ---
-language: python
-python: 2.7
-cache: pip
-sudo: required
 
-matrix:
-  fast_finish: true
-
-env:
-  - TEST_RUN="echo Soon"
-
-before_install:
-  - sudo apt-get install shellcheck
-  - pip install -U -r test-requirements.txt
-
-install: true
-
-before_script:
-  - "./tests/test-flake8.sh"
-  - "./tests/test-shellcheck.sh"
-  - "./tests/test-yamllint.sh"
-
-script: "$TEST_RUN"
+language: node_js
+script:
+- eslint cloud-functions/
+# - npm run lint
 
 git:
   submodules: false
+
+# sudo: required
+
+before_install:
+  - sudo apt-get install shellcheck
+  - git clone https://github.com/IBM/pattern-ci
+  - "./pattern-ci/scripts/install-nodejs.sh"
+  - npm install -g eslint
+
+# before_script:
+#   - "./tests/test-flake8.sh"
+#   - "./tests/test-shellcheck.sh"
+#   - "./tests/test-yamllint.sh"

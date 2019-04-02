@@ -21,8 +21,8 @@ var watson = require('watson-developer-cloud')
 var ttsAuthorization = new watson.authorization({
   password: params.TTS_PASSWD,
   username: params.TTS_USERNAME,
-  url: 'https://stream.watsonplatform.net/authorization/api/v1/token', //watson.TextToSpeechV1.URL
-  version: 'v1'
+  url: 'https://stream.watsonplatform.net/authorization/api/v2/token', //watson.TextToSpeechV1.URL
+  version: 'v2'
 });
 var mqttClient = mqtt.connect(mqtt_broker, mqtt_options);
 
@@ -32,7 +32,7 @@ function main(params) {
       console.log('error:', err);
     } else {
       console.log("sending token " + token.toString())
-      mqttClient.publish('iot-2/type/MQTTDevice/id/965d11de/evt/token/fmt/json', token)
+      mqttClient.publish('iot-2/type/MQTTDevice/id/' + params.IOT_DEVICE_ID + '/evt/token/fmt/json', token)
     }
   })
   return {payload:  "TTS token generated"}

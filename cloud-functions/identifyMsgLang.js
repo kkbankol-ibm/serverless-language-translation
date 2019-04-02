@@ -27,22 +27,22 @@ var msgPayload = msgJSON.d.message
 var clientName = msgJSON.d.client
 
 var language_translator =  watson.language_translator({
-        username: params.language_translation_username,
-        password: params.language_translation_password,
-        version: 'v2'
-    }
+  username: params.language_translation_username,
+  password: params.language_translation_password,
+  version: 'v2'
+}
 )
 
 function main(params) {
   return new Promise(function(resolve, reject) {
-      language_translator.identify({ text: msgPayload},
-        function(err, identifiedLanguages) {
-          if (err)
-            console.log(err)
-          else
-            resolve({
-              language: identifiedLanguages[0]
-            });
+    language_translator.identify({ text: msgPayload},
+      function(err, identifiedLanguages) {
+        if (err)
+          console.log(err)
+        else
+          resolve({
+            language: identifiedLanguages[0]
+          });
       })
   })
 }
