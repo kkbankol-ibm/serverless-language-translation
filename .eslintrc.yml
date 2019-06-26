@@ -12,8 +12,8 @@ rules:
   linebreak-style:
     - error
     - unix
-  no-unused-vars:
-    - warn
+  no-unused-vars: # main is defined but never used
+    - off
   no-undef:
     - warn
   no-irregular-whitespace:
