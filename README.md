@@ -20,7 +20,7 @@ When the reader has completed this code pattern, they will understand how to:
 1. Message received from a client, which can be a web browser, CLI, SMS text, etc.
 2. If message payload contains an audio file, it is transcribed to text.
 3. Transcribed text is translated to other supported languages.
-4. If message is sent via SMS, sender phone number is added to an etcd key-value store. etcd is used here to maintain a list of subscribers’ phone numbers, as well as their respective languages. An adjustable TTL value is used here to remove numbers from the store if the subscriber does not participate in the conversation for 300 seconds.
+4. If message is sent via SMS, sender phone number is added to an DB2 database. DB2 is used here to maintain a list of subscribers’ phone numbers, as well as their respective languages. An adjustable TTL value is used here to remove numbers from the store if the subscriber does not participate in the conversation for 300 seconds.
 5. Translated messages/audio streams are published to various channels on the MQTT broker, which then distributes the messages among subscribing clients.
 
 ## Included components
@@ -73,9 +73,10 @@ Create the required IBM Cloud services.
 - [Watson Language Translator](https://cloud.ibm.com/catalog/services/language-translator)
 <!-- - [Kubernetes](https://cloud.ibm.com/kubernetes/catalog/cluster) -->
 
-For SMS integration, create the following third party services. Note that these are both paid services.
+For SMS integration (which is optional), create the following third party services. Note that these are both paid services.
 - [Twilio](https://cloud.ibm.com/catalog/services/twilio-programmable-sms)
-- [etcd](https://console.bluemix.net/catalog/services/compose-for-etcd)
+- [DB2](https://cloud.ibm.com/catalog/services/db2)
+<!-- - [etcd](https://console.bluemix.net/catalog/services/compose-for-etcd) -->
 <!-- - [Redis](https://cloud.ibm.com/catalog/services/databases-for-redis) -->
 
 Each service can be provisioned with the following steps
@@ -159,7 +160,7 @@ mqtt_pub -i "a:${IOT_ORG_ID}:client_pub" -u "${IOT_API_KEY}" -P "${IOT_AUTH_TOKE
 
 ### 2. Deploy MQTT Feed
 
-Install the MQTT package/feed found in the openwhisk-package-mqtt-watson submodule [here](https://github.com/kkbankol-ibm/openwhisk-package-mqtt-watson). This "feed" enables the Cloud Functions service to subscribe to one or more MQTT topics and invoke actions in response to incoming messages. To see more on how feeds work with IBM Cloud Functions, please visit these [documents](https://github.com/apache/incubator-openwhisk/blob/master/docs/feeds.md)
+Install the MQTT "feed" found in the openwhisk-package-mqtt-watson submodule [here](https://github.com/kkbankol-ibm/openwhisk-package-mqtt-watson). This feed enables the Cloud Functions service to subscribe to one or more MQTT topics and invoke actions in response to incoming messages. To see more on how feeds work with IBM Cloud Functions, please visit these [documents](https://github.com/apache/incubator-openwhisk/blob/master/docs/feeds.md)
 
 <!-- Next, we'll need to deploy a "feed" for our IoT Platform service. This feed has the ability to subscribe to a specific MQTT channel and execute a function every time a new message comes in.
 
@@ -177,9 +178,9 @@ More documentation on feeds https://console.bluemix.net/docs/services/IoT/gatewa
 Upload each "Action" to the Cloud Functions codebase with the following commands.
 ```
 ibmcloud fn action create translateText translateText.js
-ibmcloud fn action create sendSMS sendSMS.js
+ibmcloud fn action create sendSMS sendSMStwilio.js
 ibmcloud fn action create iotPub iotPub.py
-ibmcloud fn action create handleIncomingSMS handleIncomingSMS.js
+ibmcloud fn action create handleIncomingSMS handleIncomingSMSdB2.js
 ```
 
 After each action is created, set or bind default credentials for the corresponding services.
@@ -193,9 +194,23 @@ ibmcloud fn service bind language_translator handleIncomingSMS
 # Credentials for the Watson IoT Platform and third party services can be set using the "update command"
 # ibmcloud fn action update <action_name> -p <param_name> <param_value>
 ibmcloud fn action update iotPub -p iot_org_id "${IOT_ORG_ID}" -p iot_device_id "${IOT_DEVICE_ID}" -p iot_device_type "${IOT_DEVICE_TYPE}" -p iot_auth_token "${IOT_AUTH_TOKEN}" -p iot_api_key "${IOT_API_KEY}"
+ibmcloud fn action update sendSMS -p twilioNumber "${TWILIO_NUMBER}" -p twilioSid "${TWILIO_SID}" -p twilioAuthToken "${TWILIO_AUTH_TOKEN}"
+ibmcloud fn action update handleIncomingSMS -p twilioNumber "${TWILIO_NUMBER}" -p twilioSid "${TWILIO_SID}" -p twilioAuthToken "${TWILIO_AUTH_TOKEN}" -p db2dsn "${db2dsn}"
+```
+Note that the `db2dsn` parameter referenced above is essentially a string with all embedded credentials for your DB2 instance, which can be acquired by navigating to your db2 instance in the IBM Cloud console 
+<!-- ```
+# Most IBM Cloud native service credentials can be easily imported to a Cloud function using the "service bind" command
+# ibmcloud fn service bind <service> <action_name>
+ibmcloud fn service bind language_translator translateText
+ibmcloud fn service bind language_translator handleIncomingSMS
+
+
+# Credentials for the Watson IoT Platform and third party services can be set using the "update command"
+# ibmcloud fn action update <action_name> -p <param_name> <param_value>
+ibmcloud fn action update iotPub -p iot_org_id "${IOT_ORG_ID}" -p iot_device_id "${IOT_DEVICE_ID}" -p iot_device_type "${IOT_DEVICE_TYPE}" -p iot_auth_token "${IOT_AUTH_TOKEN}" -p iot_api_key "${IOT_API_KEY}"
 ibmcloud fn action update sendSMS -p twilioNumber "${TWILIO_NUMBER}" -p twilioSid "${TWILIO_SID}" -p twilioAuthToken "${TWILIO_AUTH_TOKEN}" -p redisUsername "${REDIS_USER}" -p redisPassword "${REDIS_PASSWORD}" -p redisHost "${REDIS_HOST}" -p redisPort "${REDIS_PORT}"
 ibmcloud fn action update handleIncomingSMS -p twilioNumber "${TWILIO_NUMBER}" -p twilioSid "${TWILIO_SID}" -p twilioAuthToken "${TWILIO_AUTH_TOKEN}" -p redisUsername "${REDIS_USER}" -p redisPassword "${REDIS_PASSWORD}" -p redisHost "${REDIS_HOST}" -p redisPort "${REDIS_PORT}"
-```
+``` -->
 
 ### 4. Create Triggers
 Create `Triggers` to represent events.
@@ -260,7 +275,7 @@ Flow:
 - Trigger associated with topic forwards message payload/language to translator action.
 - Translator action passes message payload through a loop, where each item is a language that the original message will be translated to. After translation is complete, another trigger will be fired, which kicks off two other "publish" actions simultaneously.
 - One action publishes results to all MQTT clients
-- The other action looks up SMS subscriber numbers/language in Redis and sends them the result via Twilio.
+- The other action looks up SMS subscriber numbers/language in DB2 and sends them the result via Twilio.
 
 <!-- Restrictions:
 
